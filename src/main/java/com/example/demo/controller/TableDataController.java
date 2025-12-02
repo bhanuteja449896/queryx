@@ -15,13 +15,7 @@ public class TableDataController {
 
   @Autowired private TableDataService tableDataService;
 
-  /**
-   * A single, flexible endpoint for inserting data into a table.
-   * This endpoint uses a "list of lists" structure to handle both single and multiple row inserts in a single request.
-   *
-   * @param data The InsertData object containing the table name and a list of rows to insert.
-   * @return A ResponseDTO indicating the result of the operation.
-   */
+
   @PostMapping("/insert")
   public ResponseDTO insert(@RequestBody InsertData data) {
     return tableDataService.insertData(data);
