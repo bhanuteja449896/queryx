@@ -7,9 +7,7 @@ import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -32,6 +30,10 @@ public class SchemaService {
         List<Map<String, Object>> columns = jdbcTemplate.queryForList(sql, tableName);
 
         return Map.of("columns", columns.stream().collect(Collectors.toMap(col -> (String) col.get("column_name"), col -> col)));
+    }
+
+    public Map<String,Map<String,Map<String,Object>>> getListOfTableSchemas(List<String> tableNames) {
+        return tableNames.stream().collect(Collectors.toMap(table -> table, this::getTableSchema));
     }
 
     public boolean isTableExists(String tableName) {

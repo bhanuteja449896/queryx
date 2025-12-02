@@ -1,12 +1,9 @@
 package com.example.demo.services;
 
-import com.example.demo.dto.AIQueryRequest;
-import com.example.demo.dto.QueryRequest;
-import com.example.demo.dto.QueryResponse;
+import com.example.demo.dto.*;
 import java.sql.ResultSetMetaData;
 import java.util.*;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.beans.factory.annotation.*;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.*;
 import org.springframework.jdbc.core.JdbcTemplate;
@@ -17,6 +14,8 @@ import org.springframework.web.client.RestTemplate;
 public class QueryService {
 
   @Autowired private JdbcTemplate jdbcTemplate;
+
+  @Autowired private SchemaService schemaService;
 
   @Value("${gemini.api.key:}")
   private String geminiApiKey;
@@ -81,34 +80,23 @@ public class QueryService {
     return response;
   }
 
-  /**
-   * Generate SQL query using AI (Google Gemini) from natural language input.
-   *
-   * @param request The AI query request
-   * @return Response with generated SQL
-   */
+
   public QueryResponse generateAIQuery(QueryRequest request) {
     QueryResponse response = new QueryResponse();
 
     try {
-      // Validate input
       if (request.getNaturalLanguageQuery() == null
           || request.getNaturalLanguageQuery().trim().isEmpty()) {
         response.setRc("400");
         response.setMessage("Natural language query cannot be empty");
         return response;
       }
-
-      // Get schema context for the specified table or all tables
       String schemaContext = getSchemaContext(request.getTableName());
 
-      // Build AI request
       AIQueryRequest aiRequest = new AIQueryRequest();
       aiRequest.setUserInput(request.getNaturalLanguageQuery());
       aiRequest.setSchemaContext(schemaContext);
       aiRequest.setTargetTable(request.getTableName());
-
-      // Call Gemini API to generate SQL
       String generatedSql = callGeminiAPI(aiRequest);
 
       response.setRc("200");
