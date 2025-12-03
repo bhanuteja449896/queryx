@@ -6,9 +6,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-/**
- * DTO for query execution results.
- */
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -58,4 +56,5 @@ public class QueryResponse {
      * Query type executed
      */
     private String queryType;
+
 }

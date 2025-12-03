@@ -1,5 +1,7 @@
 package com.example.demo.dto;
 
+import java.util.List;
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -16,7 +18,7 @@ public class QueryRequest {
     /**
      * The SQL query to execute (for human queries mode).
      */
-    private String query;
+    private String humanQuery;
 
     /**
      * Natural language input for AI-enhanced query generation.
@@ -27,16 +29,11 @@ public class QueryRequest {
     /**
      * Table name for context (optional, helps AI generate better queries).
      */
-    private String tableName;
+    private List<String> tableNames;
 
     /**
      * Query type: "human" or "ai-enhanced"
      */
     private String queryType;
 
-    /**
-     * Flag to indicate if this is just generating the AI query (not executing it).
-     * If true, returns the generated SQL for user verification.
-     */
-    private boolean generateOnly;
 }
