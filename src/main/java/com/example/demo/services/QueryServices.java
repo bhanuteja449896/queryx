@@ -16,6 +16,9 @@ public class QueryServices {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private SchemaService schemaService;
+
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     @Value("${gemini.api.key:}")
@@ -41,11 +44,31 @@ public class QueryServices {
 
     public Map<String,Object> createAIJsonPromptFormat(QueryRequest queryRequest){
         AIQuery aiQuery = createAIQuery(queryRequest);
+        
+        // Fetch real schema from database
+        Map<String, Map<String, Map<String, Object>>> tableSchemas = 
+            schemaService.getListOfTableSchemas(queryRequest.getTableNames());
+        
+        // Build schema description for AI
+        StringBuilder schemaDescription = new StringBuilder();
+        for (Map.Entry<String, Map<String, Map<String, Object>>> entry : tableSchemas.entrySet()) {
+            String tableName = entry.getKey();
+            Map<String, Object> columns = (Map<String, Object>) entry.getValue().get("columns");
+            
+            schemaDescription.append("Table: ").append(tableName).append("\n");
+            schemaDescription.append("Columns: ");
+            
+            List<String> columnNames = new ArrayList<>(columns.keySet());
+            schemaDescription.append(String.join(", ", columnNames));
+            schemaDescription.append("\n\n");
+        }
+        
         Map<String, Object> aiJsonPrompt = new HashMap<>();
         aiJsonPrompt.put("requirements", aiQuery.getRequirements());
         aiJsonPrompt.put("security", aiQuery.getSecurityGuards());
         aiJsonPrompt.put("database_type", aiQuery.getDatabaseType());
         aiJsonPrompt.put("table_names", aiQuery.getTableNames());
+        aiJsonPrompt.put("table_schemas", schemaDescription.toString());
         aiJsonPrompt.put("user_input", aiQuery.getUserInput());
         aiJsonPrompt.put("expected_return_type", aiQuery.getExpectedReturnType());
         return aiJsonPrompt;
@@ -61,6 +84,10 @@ public class QueryServices {
             response.setMessage("Query executed successfully.");
             response.setData(result);
             response.setExecutionTimeMs(endTime - startTime);
+            response.setExecutedQuery(sqlQuery);
+            response.setRowsAffected(result.size());
+            response.setQueryType("HUMAN");
+
         } catch (Exception e) {
             response.setRc("500");
             response.setMessage("Error executing query: " + e.getMessage());
@@ -83,17 +110,37 @@ public class QueryServices {
         try {
             Map<String, Object> prompt = createAIJsonPromptFormat(queryRequest);
             String promptJson = objectMapper.writeValueAsString(prompt);
+            
             String generatedSql = callGeminiAPI(promptJson);
 
+            // Remove newlines and normalize whitespace
+            String cleanedSql = generatedSql
+                .replaceAll("\\n", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
+            
+            if (cleanedSql.endsWith(";")) {
+                cleanedSql = cleanedSql.substring(0, cleanedSql.length() - 1).trim();
+            }
+
+            // NOW EXECUTE THE GENERATED SQL
+            var result = jdbcTemplate.queryForList(cleanedSql);
+            
             response.setRc("200");
-            response.setMessage("AI query generated successfully.");
+            response.setMessage("AI query generated and executed successfully.");
             response.setGeneratedSql(generatedSql);
+            response.setData(result);
+            response.setExecutionTimeMs(System.currentTimeMillis() - startTime);
+            response.setExecutedQuery(cleanedSql);
+            response.setRowsAffected(result.size());
+            response.setQueryType("AI");
+            
         } catch (JsonProcessingException e) {
             response.setRc("500");
             response.setMessage("Failed to build AI prompt: " + e.getMessage());
         } catch (Exception e) {
             response.setRc("500");
-            response.setMessage("Failed to generate AI query: " + e.getMessage());
+            response.setMessage("Failed to execute AI query: " + e.getMessage());
         }
 
         response.setExecutionTimeMs(System.currentTimeMillis() - startTime);
@@ -159,16 +206,24 @@ public class QueryServices {
         }
 
         text = text.strip();
+        
+        // Remove markdown code fences
         if (text.startsWith("```sql")) {
-            text = text.substring(6);
+            text = text.substring(6).strip();
         } else if (text.startsWith("```")) {
-            text = text.substring(3);
+            text = text.substring(3).strip();
         }
         if (text.endsWith("```")) {
-            text = text.substring(0, text.length() - 3);
+            text = text.substring(0, text.length() - 3).strip();
+        }
+        
+        // Remove trailing semicolon if present
+        text = text.trim();
+        if (text.endsWith(";")) {
+            text = text.substring(0, text.length() - 1).trim();
         }
 
-        return text.trim();
+        return text;
     }
 
 }

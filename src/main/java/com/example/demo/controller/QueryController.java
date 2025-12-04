@@ -14,7 +14,7 @@ public class QueryController {
     private QueryServices queryServices;
 
     @PostMapping("/execute")
-    public QueryResponse executeHumanQuery(@RequestBody String sqlQuery) {
+    public QueryResponse executeHumanQuery(@RequestParam("query") String sqlQuery) {
         return queryServices.executeHumanQuery(sqlQuery);
     }
 
