@@ -1,0 +1,28 @@
+version: '3.8'
+
+services:
+  queryx-app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: queryx-app
+    ports:
+      - "8080:8080"
+    environment:
+      PORT: 8080
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ep-red-leaf-a1k09yb6-pooler.ap-southeast-1.aws.neon.tech/neondb?sslmode=require
+      SPRING_DATASOURCE_USERNAME: neondb_owner
+      SPRING_DATASOURCE_PASSWORD: npg_Xpush3x6ITwF
+      SPRING_DATASOURCE_DRIVER_CLASS_NAME: org.postgresql.Driver
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      GEMINI_API_KEY: ${GEMINI_API_KEY}
+      GEMINI_API_URL: https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent
+      LOGGING_LEVEL_ROOT: INFO
+      LOGGING_LEVEL_COM_EXAMPLE_DEMO: DEBUG
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/schema/tables"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s

@@ -8,6 +8,7 @@ import com.example.demo.services.QueryServices;
 
 @RestController
 @RequestMapping("/query")
+@CrossOrigin(origins = "*")
 public class QueryController {
     
     @Autowired
